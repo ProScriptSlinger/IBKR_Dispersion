@@ -64,9 +64,11 @@ class BacktestEngine:
         Returns:
             Dictionary with backtest results
         """
-        # Convert index to UTC timezone if it has timezone info
-        if prices.index.tz is not None:
-            prices.index = prices.index.tz_convert('UTC')
+        # Ensure prices index is timezone-aware
+        if not isinstance(prices.index, pd.DatetimeIndex):
+            prices.index = pd.to_datetime(prices.index)
+        if prices.index.tz is None:
+            prices.index = prices.index.tz_localize('UTC')
         
         # Convert start and end dates to UTC
         if start_date is not None:

@@ -119,3 +119,15 @@ MIT License
 3. Commit your changes
 4. Push to the branch
 5. Create a Pull Request
+
+To use this implementation:
+
+First, install the required dependencies:
+`pip install -r requirements.txt`
+Run
+For backtesting:
+`python examples/backtest_example.py`
+Run
+For live trading:
+`python examples/live_trading_example.py`
+Run

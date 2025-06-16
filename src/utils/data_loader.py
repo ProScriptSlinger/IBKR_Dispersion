@@ -5,6 +5,7 @@ from typing import List, Optional, Union
 from datetime import datetime, timedelta
 import logging
 from .network_utils import verify_yahoo_finance_connectivity
+import pytz
 
 logger = logging.getLogger(__name__)
 
@@ -42,11 +43,21 @@ class DataLoader:
         if isinstance(end_date, str):
             end_date = pd.to_datetime(end_date)
         
+        # Ensure timezone awareness
+        if start_date.tzinfo is None:
+            start_date = pytz.UTC.localize(start_date)
+        if end_date.tzinfo is None:
+            end_date = pytz.UTC.localize(end_date)
+        
         # Check cache first
         if self.cache_dir:
             cache_file = f"{self.cache_dir}/{'-'.join(symbols)}_{start_date.date()}_{end_date.date()}_{interval}.csv"
             try:
-                return pd.read_csv(cache_file, index_col=0, parse_dates=True)
+                df = pd.read_csv(cache_file, index_col=0, parse_dates=True)
+                # Ensure index is timezone-aware
+                if df.index.tz is None:
+                    df.index = df.index.tz_localize('UTC')
+                return df
             except FileNotFoundError:
                 pass
         
@@ -79,6 +90,10 @@ class DataLoader:
         # Combine data
         combined_data = pd.DataFrame(data)
         
+        # Ensure index is timezone-aware
+        if combined_data.index.tz is None:
+            combined_data.index = combined_data.index.tz_localize('UTC')
+        
         # Cache data
         if self.cache_dir:
             combined_data.to_csv(cache_file)
@@ -104,9 +119,9 @@ class DataLoader:
         """
         # Fill missing values
         if fill_method == 'ffill':
-            data = data.fillna(method='ffill')
+            data = data.ffill()
         elif fill_method == 'bfill':
-            data = data.fillna(method='bfill')
+            data = data.bfill()
         elif fill_method == 'interpolate':
             data = data.interpolate()
         
@@ -119,7 +134,7 @@ class DataLoader:
             data.loc[z_scores > 3, column] = np.nan
         
         # Fill remaining missing values
-        data = data.fillna(method='ffill')
+        data = data.ffill()
         
         return data
     
