@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import seaborn as sns
 from ..strategy.dispersion import DispersionStrategy
+import pytz
 
 class BacktestEngine:
     def __init__(
@@ -32,6 +33,20 @@ class BacktestEngine:
         self.portfolio_value: List[float] = [initial_capital]
         self.dates: List[datetime] = []
         
+    def _ensure_timezone_aware(self, dt: datetime) -> datetime:
+        """
+        Ensure datetime is timezone-aware.
+        
+        Args:
+            dt: Input datetime
+            
+        Returns:
+            Timezone-aware datetime
+        """
+        if dt.tzinfo is None:
+            return pytz.UTC.localize(dt)
+        return dt.astimezone(pytz.UTC)
+    
     def run(
         self,
         prices: pd.DataFrame,
@@ -49,9 +64,16 @@ class BacktestEngine:
         Returns:
             Dictionary with backtest results
         """
-        if start_date:
+        # Convert index to UTC timezone if it has timezone info
+        if prices.index.tz is not None:
+            prices.index = prices.index.tz_convert('UTC')
+        
+        # Convert start and end dates to UTC
+        if start_date is not None:
+            start_date = self._ensure_timezone_aware(start_date)
             prices = prices[prices.index >= start_date]
-        if end_date:
+        if end_date is not None:
+            end_date = self._ensure_timezone_aware(end_date)
             prices = prices[prices.index <= end_date]
         
         for date, row in prices.iterrows():

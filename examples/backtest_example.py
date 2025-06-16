@@ -7,6 +7,7 @@ from src.backtest.engine import BacktestEngine
 from src.utils.data_loader import DataLoader
 import pandas as pd
 from datetime import datetime, timedelta
+import pytz
 
 def main():
     # Initialize components
@@ -39,7 +40,7 @@ def main():
     ]
     
     # Fetch and preprocess data
-    end_date = datetime.now()
+    end_date = datetime.now(pytz.UTC)
     start_date = end_date - timedelta(days=365)  # 1 year of data
     
     print("Fetching historical data...")
