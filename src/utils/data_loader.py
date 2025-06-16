@@ -24,7 +24,8 @@ class DataLoader:
         self,
         symbols: List[str],
         start_date: datetime,
-        end_date: datetime
+        end_date: datetime,
+        interval: str = '1d'
     ) -> pd.DataFrame:
         """
         Fetch historical data for multiple symbols.
@@ -33,6 +34,7 @@ class DataLoader:
             symbols: List of symbols to fetch data for
             start_date: Start date for data
             end_date: End date for data
+            interval: Data interval (e.g., '1d', '1h', '1m')
             
         Returns:
             DataFrame with historical data
@@ -47,6 +49,30 @@ class DataLoader:
         start_date = start_date.astimezone(pytz.UTC)
         end_date = end_date.astimezone(pytz.UTC)
         
+        # Check cache first
+        if self.cache_dir:
+            cache_file = os.path.join(
+                self.cache_dir,
+                f"{'-'.join(symbols)}_{start_date.date()}_{end_date.date()}_{interval}.csv"
+            )
+            try:
+                df = pd.read_csv(cache_file, index_col=0, parse_dates=True)
+                # Ensure index is timezone-aware
+                if not isinstance(df.index, pd.DatetimeIndex):
+                    df.index = pd.to_datetime(df.index)
+                if hasattr(df.index, 'tz') and df.index.tz is not None:
+                    df.index = df.index.tz_convert('UTC')
+                else:
+                    df.index = df.index.tz_localize('UTC')
+                return df
+            except FileNotFoundError:
+                pass
+        
+        # Verify connectivity before attempting to download
+        if not verify_yahoo_finance_connectivity():
+            logger.error("Failed to verify connectivity to Yahoo Finance. Please check your network settings and DNS configuration.")
+            raise ConnectionError("Failed to connect to Yahoo Finance. Check DNS settings and PiHole configuration if applicable.")
+        
         # Fetch data for each symbol
         dfs = []
         for symbol in symbols:
@@ -55,6 +81,7 @@ class DataLoader:
                     symbol,
                     start=start_date,
                     end=end_date,
+                    interval=interval,
                     progress=False
                 )
                 
@@ -84,6 +111,11 @@ class DataLoader:
         
         # Pivot to get symbols as columns
         df = df.pivot(columns='Symbol', values='Close')
+        
+        # Cache data
+        if self.cache_dir:
+            os.makedirs(self.cache_dir, exist_ok=True)
+            df.to_csv(cache_file)
         
         return df
     
