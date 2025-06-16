@@ -123,7 +123,7 @@ class DataLoader:
         self,
         data: pd.DataFrame,
         fill_method: str = 'ffill',
-        min_periods: int = 20
+        min_periods: int = 5
     ) -> pd.DataFrame:
         """
         Preprocess the data by handling missing values and outliers.
@@ -136,6 +136,9 @@ class DataLoader:
         Returns:
             Preprocessed DataFrame
         """
+        print(f"Initial data shape: {data.shape}")
+        print(f"Missing values before preprocessing:\n{data.isnull().sum()}")
+        
         # Fill missing values
         if fill_method == 'ffill':
             data = data.ffill()
@@ -144,16 +147,28 @@ class DataLoader:
         elif fill_method == 'interpolate':
             data = data.interpolate()
         
+        print(f"Data shape after filling missing values: {data.shape}")
+        print(f"Missing values after filling:\n{data.isnull().sum()}")
+        
         # Remove rows with too many missing values
         data = data.dropna(thresh=min_periods)
         
-        # Handle outliers using z-score
+        print(f"Data shape after removing rows with too many missing values: {data.shape}")
+        
+        # Handle outliers using z-score, but be less aggressive
         for column in data.columns:
             z_scores = np.abs((data[column] - data[column].mean()) / data[column].std())
-            data.loc[z_scores > 3, column] = np.nan
+            # Only remove extreme outliers (z-score > 5 instead of 3)
+            data.loc[z_scores > 5, column] = np.nan
+        
+        print(f"Data shape after outlier removal: {data.shape}")
+        print(f"Missing values after outlier removal:\n{data.isnull().sum()}")
         
         # Fill remaining missing values
         data = data.ffill()
+        
+        print(f"Final data shape: {data.shape}")
+        print(f"Final missing values:\n{data.isnull().sum()}")
         
         return data
     
