@@ -51,8 +51,16 @@ def main():
         interval='1d'
     )
     
+    print(f"Data shape: {data.shape}")
+    print(f"Data columns: {data.columns.tolist()}")
+    print(f"Data index range: {data.index[0]} to {data.index[-1]}")
+    
     print("Preprocessing data...")
     data = data_loader.preprocess_data(data)
+    
+    print(f"Preprocessed data shape: {data.shape}")
+    print(f"Preprocessed data columns: {data.columns.tolist()}")
+    print(f"Preprocessed data index range: {data.index[0]} to {data.index[-1]}")
     
     # Run backtest
     print("Running backtest...")

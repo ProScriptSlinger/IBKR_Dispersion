@@ -64,6 +64,10 @@ class BacktestEngine:
         Returns:
             Dictionary with backtest results
         """
+        print(f"Starting backtest with {len(prices)} price points")
+        print(f"Price columns: {prices.columns.tolist()}")
+        print(f"Price index range: {prices.index[0]} to {prices.index[-1]}")
+        
         # Ensure prices index is timezone-aware
         if not isinstance(prices.index, pd.DatetimeIndex):
             prices.index = pd.to_datetime(prices.index)
@@ -94,7 +98,12 @@ class BacktestEngine:
             # Calculate portfolio value
             portfolio_value = self._calculate_portfolio_value(row)
             self.portfolio_value.append(portfolio_value)
+            
+            if len(self.portfolio_value) % 50 == 0:  # Print every 50 iterations
+                print(f"Processed {len(self.portfolio_value)} dates, current portfolio value: {portfolio_value:.2f}")
         
+        print(f"Backtest complete. Total dates processed: {len(self.dates)}")
+        print(f"Final portfolio value: {self.portfolio_value[-1]:.2f}")
         return self._generate_results()
     
     def _update_positions(self, signals: Dict, prices: pd.Series) -> None:
