@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from ..strategy.dispersion import DispersionStrategy
 import pytz
+import os
 
 class BacktestEngine:
     def __init__(
@@ -258,6 +259,8 @@ class BacktestEngine:
         plt.tight_layout()
         
         if save_path:
+            # Create directory if it doesn't exist
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
             plt.savefig(save_path)
         else:
             plt.show() 
