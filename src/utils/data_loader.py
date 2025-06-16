@@ -22,9 +22,8 @@ class DataLoader:
     def fetch_data(
         self,
         symbols: List[str],
-        start_date: Union[str, datetime],
-        end_date: Union[str, datetime],
-        interval: str = '1d'
+        start_date: datetime,
+        end_date: datetime
     ) -> pd.DataFrame:
         """
         Fetch historical data for multiple symbols.
@@ -33,72 +32,59 @@ class DataLoader:
             symbols: List of symbols to fetch data for
             start_date: Start date for data
             end_date: End date for data
-            interval: Data interval (e.g., '1d', '1h', '1m')
             
         Returns:
             DataFrame with historical data
         """
-        if isinstance(start_date, str):
-            start_date = pd.to_datetime(start_date)
-        if isinstance(end_date, str):
-            end_date = pd.to_datetime(end_date)
-        
-        # Ensure timezone awareness
+        # Ensure dates are timezone-aware
         if start_date.tzinfo is None:
             start_date = pytz.UTC.localize(start_date)
         if end_date.tzinfo is None:
             end_date = pytz.UTC.localize(end_date)
         
-        # Check cache first
-        if self.cache_dir:
-            cache_file = f"{self.cache_dir}/{'-'.join(symbols)}_{start_date.date()}_{end_date.date()}_{interval}.csv"
-            try:
-                df = pd.read_csv(cache_file, index_col=0, parse_dates=True)
-                # Ensure index is timezone-aware
-                if df.index.tz is None:
-                    df.index = df.index.tz_localize('UTC')
-                return df
-            except FileNotFoundError:
-                pass
+        # Convert dates to UTC
+        start_date = start_date.astimezone(pytz.UTC)
+        end_date = end_date.astimezone(pytz.UTC)
         
-        # Verify connectivity before attempting to download
-        if not verify_yahoo_finance_connectivity():
-            logger.error("Failed to verify connectivity to Yahoo Finance. Please check your network settings and DNS configuration.")
-            raise ConnectionError("Failed to connect to Yahoo Finance. Check DNS settings and PiHole configuration if applicable.")
-        
-        # Download data
-        data = {}
+        # Fetch data for each symbol
+        dfs = []
         for symbol in symbols:
             try:
-                ticker = yf.Ticker(symbol)
-                df = ticker.history(
+                df = yf.download(
+                    symbol,
                     start=start_date,
                     end=end_date,
-                    interval=interval
+                    progress=False
                 )
-                if df.empty:
-                    logger.warning(f"No data received for {symbol}")
-                    continue
-                data[symbol] = df['Close']
+                
+                # Ensure the index is a DatetimeIndex
+                if not isinstance(df.index, pd.DatetimeIndex):
+                    df.index = pd.to_datetime(df.index)
+                
+                # Convert index to UTC if it has timezone info
+                if hasattr(df.index, 'tz') and df.index.tz is not None:
+                    df.index = df.index.tz_convert('UTC')
+                else:
+                    df.index = df.index.tz_localize('UTC')
+                
+                # Add symbol column
+                df['Symbol'] = symbol
+                dfs.append(df)
+                
             except Exception as e:
-                logger.error(f"Error fetching data for {symbol}: {e}")
-                raise
+                logger.error(f"Error fetching data for {symbol}: {str(e)}")
+                continue
         
-        if not data:
-            raise ValueError("No data was successfully downloaded for any symbols")
+        if not dfs:
+            raise ValueError("No data could be fetched for any symbol")
         
-        # Combine data
-        combined_data = pd.DataFrame(data)
+        # Combine all dataframes
+        df = pd.concat(dfs)
         
-        # Ensure index is timezone-aware
-        if combined_data.index.tz is None:
-            combined_data.index = combined_data.index.tz_localize('UTC')
+        # Pivot to get symbols as columns
+        df = df.pivot(columns='Symbol', values='Close')
         
-        # Cache data
-        if self.cache_dir:
-            combined_data.to_csv(cache_file)
-        
-        return combined_data
+        return df
     
     def preprocess_data(
         self,
