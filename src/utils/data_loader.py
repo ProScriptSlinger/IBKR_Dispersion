@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import logging
 from .network_utils import verify_yahoo_finance_connectivity
 import pytz
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +87,7 @@ class DataLoader:
         
         if not data:
             raise ValueError("No data was successfully downloaded for any symbols")
-        
+        os.makedirs('data/cache', exist_ok=True)
         # Combine data
         combined_data = pd.DataFrame(data)
         
