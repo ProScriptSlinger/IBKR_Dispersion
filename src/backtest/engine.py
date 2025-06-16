@@ -209,7 +209,12 @@ class BacktestEngine:
         total_return = (self.portfolio_value[-1] / self.initial_capital) - 1
         annual_return = (1 + total_return) ** (252 / len(returns)) - 1
         sharpe_ratio = np.sqrt(252) * returns.mean() / returns.std()
-        max_drawdown = (pd.Series(self.portfolio_value).cummax() - self.portfolio_value).max() / pd.Series(self.portfolio_value).cummax()
+        
+        # Calculate max drawdown
+        portfolio_series = pd.Series(self.portfolio_value)
+        rolling_max = portfolio_series.cummax()
+        drawdowns = (rolling_max - portfolio_series) / rolling_max
+        max_drawdown = float(drawdowns.max())  # Convert to float
         
         # Generate trade statistics
         trades_df = pd.DataFrame(self.trades)
