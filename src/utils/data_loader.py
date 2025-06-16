@@ -59,7 +59,7 @@ class DataLoader:
                 df = pd.read_csv(cache_file, index_col=0, parse_dates=True)
                 # Ensure index is timezone-aware
                 if not isinstance(df.index, pd.DatetimeIndex):
-                    df.index = pd.to_datetime(df.index)
+                    df.index = pd.to_datetime(df.index, utc=True)
                 if hasattr(df.index, 'tz') and df.index.tz is not None:
                     df.index = df.index.tz_convert('UTC')
                 else:
@@ -87,7 +87,7 @@ class DataLoader:
                 
                 # Ensure the index is a DatetimeIndex
                 if not isinstance(df.index, pd.DatetimeIndex):
-                    df.index = pd.to_datetime(df.index)
+                    df.index = pd.to_datetime(df.index, utc=True)
                 
                 # Convert index to UTC if it has timezone info
                 if hasattr(df.index, 'tz') and df.index.tz is not None:
