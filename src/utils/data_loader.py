@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import logging
 from .network_utils import verify_yahoo_finance_connectivity
 import pytz
+import os
 
 logger = logging.getLogger(__name__)
 
